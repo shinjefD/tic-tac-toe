@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
 const EMPTY = null;
+type Squares = string | null;
 
-const calculateWinner = (squares: string[]) => {
+const calculateWinner = (squares: Squares[]) => {
   for (let i = 0; i < 9; i += 3) {
     if (squares[i] == "O" && squares[i + 1] == "O" && squares[i + 2] == "O")
       return 1;
@@ -35,8 +36,62 @@ const calculateWinner = (squares: string[]) => {
   return null; // Return null if no winner
 };
 
+const isBoardFull = (squares: Squares[]) => {
+  return squares.every((square) => square !== null);
+};
+
+const minMax = (squares: Squares[], depth: number, isMaximizing: boolean) => {
+  const winner = calculateWinner(squares);
+  if (winner == -1) return 10 - depth;
+  if (winner == 1) return depth - 10;
+  if (isBoardFull(squares)) return 0;
+
+  if (isMaximizing) {
+    //Maximizing gain for computer (AI)
+    let maxEvaluation = -Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (squares[i] === EMPTY) {
+        squares[i] = "X";
+        const evaluation = minMax(squares, depth + 1, false);
+        squares[i] = EMPTY;
+        maxEvaluation = Math.max(maxEvaluation, evaluation);
+      }
+    }
+    return maxEvaluation;
+  } else {
+    //Minimizing gain for player
+    let minEvaluation = Infinity;
+    for (let i = 0; i < 9; i++) {
+      if (squares[i] === EMPTY) {
+        squares[i] = "O";
+        const evaluation = minMax(squares, depth + 1, true);
+        squares[i] = EMPTY;
+        minEvaluation = Math.min(minEvaluation, evaluation);
+      }
+    }
+    return minEvaluation;
+  }
+};
+
+const findBestMove = (squares: Squares[]) => {
+  let bestMove = null;
+  let bestValue = -Infinity;
+  for (let i = 0; i < 9; i++) {
+    if (squares[i] === EMPTY) {
+      squares[i] = "X";
+      const value = minMax(squares, 0, false);
+      squares[i] = EMPTY;
+      if (value > bestValue) {
+        bestMove = i;
+        bestValue = value;
+      }
+    }
+  }
+  return bestMove;
+};
+
 const Board = () => {
-  const [squares, setSquares] = useState<string[]>(Array(9).fill(null));
+  const [squares, setSquares] = useState<Squares[]>(Array(9).fill(null));
   const [message, setMessage] = useState<string | null>(null);
   const isComputerMove = useRef<boolean>(false);
 
@@ -50,9 +105,7 @@ const Board = () => {
       return;
     }
 
-    const isBoardFull = squares.every((square) => square !== null);
-
-    if (isBoardFull) {
+    if (isBoardFull(squares)) {
       setMessage("It's a tie ^_^");
       return;
     }
@@ -65,14 +118,21 @@ const Board = () => {
   const computerMove = () => {
     isComputerMove.current = false;
 
-    const availableSquares = squares
-      .map((square, index) => ({ square, index }))
-      .filter(({ square }) => square === EMPTY);
+    // const availableSquares = squares //Random computer move algorithm
+    //   .map((square, index) => ({ square, index }))
+    //   .filter(({ square }) => square === EMPTY);
 
-    const randomIndex = Math.floor(Math.random() * availableSquares.length);
-    const newSquares = squares.slice();
-    newSquares[availableSquares[randomIndex].index] = "X";
-    setSquares(newSquares);
+    // const randomIndex = Math.floor(Math.random() * availableSquares.length);
+    // const newSquares = squares.slice();
+    // newSquares[availableSquares[randomIndex].index] = "X";
+    // setSquares(newSquares);
+    const bestMove = findBestMove(squares);
+    console.log(bestMove);
+    if (bestMove !== null) {
+      const newSquares = squares.slice();
+      newSquares[bestMove] = "X";
+      setSquares(newSquares);
+    }
   };
 
   const handleClick = (index: number) => {
